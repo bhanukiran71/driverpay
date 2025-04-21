@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Driver Weekly Pay Calculator</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f4f4f9; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #2b6777; color: white; }
+    input[type="number"], select { width: 80px; }
+    button {
+      margin-top: 20px; padding: 10px 20px; font-weight: bold;
+      background-color: #2b6777; color: white; border: none; cursor: pointer;
+    }
+    .bold { font-weight: bold; }
+    .highlight { background-color: #e2f0d9; }
+  </style>
+</head>
+<body>
+
+<h2>Driver Weekly Pay Calculator</h2>
+<label for="startDate"><strong>Select Start Date (Thursday):</strong></label>
+<input type="date" id="startDate" onchange="updateHeaders()" />
+
+<table id="payTable">
+  <thead>
+    <tr id="headerRow">
+      <th>Driver Name</th>
+      <th>Route #</th>
+      <th>Threshold</th>
+      <th class="day"></th><th class="day"></th><th class="day"></th><th class="day"></th>
+      <th class="day"></th><th class="day"></th><th class="day"></th>
+      <th>Extra Stops</th>
+      <th>RB</th>
+      <th>REB</th>
+      <th>CB</th>
+      <th>DTB</th>
+      <th>Total Bonus</th>
+      <th>Base Salary</th>
+      <th>Prev Week Total Bonus</th>
+      <th>Grand Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td contenteditable="true">Driver 1</td>
+      <td><select class="route"><option value="211">211</option><option value="212">212</option><option value="311">311</option></select></td>
+      <td><input type="number" class="threshold" value="80" /></td>
+      <td><input type="number" class="stops" /></td><td><input type="number" class="stops" /></td>
+      <td><input type="number" class="stops" /></td><td><input type="number" class="stops" /></td>
+      <td><input type="number" class="stops" /></td><td><input type="number" class="stops" /></td>
+      <td><input type="number" class="stops" /></td>
+      <td class="extra bold">0</td>
+      <td class="rb bold">$0</td>
+      <td><select class="reb"><option value="0">NULL</option><option value="50">Yes ($50)</option></select></td>
+      <td><select class="cb"><option value="0">NULL</option><option value="50">Yes ($50)</option></select></td>
+      <td><select class="dtb"><option value="0">NULL</option><option value="25">Yes ($25)</option></select></td>
+      <td class="totalBonus bold">$0</td>
+      <td class="baseSalary bold">$0</td>
+      <td><input type="number" class="prevBonus" value="220" /></td>
+      <td class="grandTotal highlight bold">$0</td>
+    </tr>
+  </tbody>
+</table>
+
+<button onclick="saveToSheet()">💾 Save to Google Sheet</button>
+
+<script>
+const baseSalaryAmount = 150;
+const baseMinStops = { 211: 31, 212: 35, 311: 40 };
+
+function calculateAll() {
+  document.querySelectorAll('#payTable tbody tr').forEach(row => {
+    const stops = row.querySelectorAll('.stops');
+    const threshold = parseInt(row.querySelector('.threshold').value) || 0;
+    const route = row.querySelector('.route').value;
+    const baseMin = baseMinStops[route] || 30;
+    const prevBonus = parseFloat(row.querySelector('.prevBonus').value) || 0;
+
+    let extraTotal = 0;
+    let baseSalary = 0;
+
+    stops.forEach(input => {
+      const val = parseInt(input.value) || 0;
+      if (val > threshold) extraTotal += (val - threshold);
+      if (val > baseMin) baseSalary += baseSalaryAmount;
+    });
+
+    const rb = extraTotal * 1.5;
+    const reb = parseFloat(row.querySelector('.reb').value) || 0;
+    const cb = parseFloat(row.querySelector('.cb').value) || 0;
+    const dtb = parseFloat(row.querySelector('.dtb').value) || 0;
+    const totalBonus = rb + reb + cb + dtb;
+    const grandTotal = baseSalary + prevBonus;
+
+    row.querySelector('.extra').textContent = extraTotal;
+    row.querySelector('.rb').textContent = `$${rb.toFixed(2)}`;
+    row.querySelector('.totalBonus').textContent = `$${totalBonus.toFixed(2)}`;
+    row.querySelector('.baseSalary').textContent = `$${baseSalary.toFixed(2)}`;
+    row.querySelector('.grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
+  });
+}
+
+function updateHeaders() {
+  const input = document.getElementById("startDate").value;
+  if (!input) return;
+
+  const baseDate = new Date(input + "T00:00:00");
+  const days = ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed"];
+  const headers = document.querySelectorAll("th.day");
+
+  for (let i = 0; i < headers.length; i++) {
+    const d = new Date(baseDate);
+    d.setDate(baseDate.getDate() + i);
+    const formatted = d.toLocaleDateString("en-US");
+    headers[i].textContent = `${days[i]} (${formatted})`;
+  }
+}
+
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('input', calculateAll);
+  el.addEventListener('change', calculateAll);
+});
+
+window.onload = () => {
+  calculateAll();
+  updateHeaders();
+};
+
+function saveToSheet() {
+  const row = document.querySelector("#payTable tbody tr");
+  const headers = document.querySelectorAll("#payTable thead th");
+  const stops = row.querySelectorAll('.stops');
+  const data = {};
+
+  data["Driver Name"] = row.cells[0].textContent.trim();
+  data["Route #"] = row.querySelector(".route").value;
+  data["Threshold"] = row.querySelector(".threshold").value;
+
+  for (let i = 0; i < 7; i++) {
+    const headerText = headers[i + 3].textContent.trim(); // index 3 to 9 for days
+    data[headerText] = stops[i].value;
+  }
+
+  data["Extra Stops"] = row.querySelector(".extra").textContent;
+  data["RB"] = row.querySelector(".rb").textContent.replace("$", "");
+  data["REB"] = row.querySelector(".reb").value;
+  data["CB"] = row.querySelector(".cb").value;
+  data["DTB"] = row.querySelector(".dtb").value;
+  data["Total Bonus"] = row.querySelector(".totalBonus").textContent.replace("$", "");
+  data["Base Salary"] = row.querySelector(".baseSalary").textContent.replace("$", "");
+  data["Prev Week Total Bonus"] = row.querySelector(".prevBonus").value;
+  data["Grand Total"] = row.querySelector(".grandTotal").textContent.replace("$", "");
+
+  fetch("https://script.google.com/macros/s/AKfycby6ldmq0Iaoxtm7olSmwuu3bv6gl_6Wy6CkJN-GOvOUKxuyqW9aqo7-cPcCsUtAnLvN/exec", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  }).then(() => {
+    alert("✅ Data saved to Google Sheet!");
+  }).catch(err => {
+    alert("❌ Failed to save: " + err.message);
+  });
+}
+
+</script>
+
+</body>
+</html>
