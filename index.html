@@ -154,7 +154,7 @@ function saveToSheet() {
   data["Prev Week Total Bonus"] = row.querySelector(".prevBonus").value;
   data["Grand Total"] = row.querySelector(".grandTotal").textContent.replace("$", "");
 
-  fetch("https://script.google.com/macros/s/AKfycby6ldmq0Iaoxtm7olSmwuu3bv6gl_6Wy6CkJN-GOvOUKxuyqW9aqo7-cPcCsUtAnLvN/exec", {
+  fetch("https://script.google.com/macros/s/AKfycbz9dV147Xpv5k1ItJKAuyI384L-MNQG8HFv5fyiawty_T70usZ7UosrLXXOB5c20cO2QA/exec", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
